@@ -22,6 +22,10 @@ The output is a drawing. **Export sheet** on the live page, and `node tools/shee
 
 ![Plan sheet, seed 1](media/sheet.svg)
 
+The practice called the aggregate of such habitats a multitude. `node tools/multitude.js [count] [firstSeed]` draws a contact sheet of plans from as many interviews: the same rules, different humours.
+
+![Twelve plans from twelve interviews](media/multitude.svg)
+
 ## Tests
 
 ```bash
