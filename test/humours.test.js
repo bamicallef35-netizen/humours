@@ -96,4 +96,6 @@ test("the sheet is one SVG document that carries the scenario block and a door p
   assert.equal((svg.match(/<text/g) || []).length > 10, true);
   const live = planSheet(state, { block: false });
   assert.ok(!live.includes("procedure") && live.includes("10 units"));
+  const tile = planSheet(state, { compact: true, cell: 5 });
+  assert.ok(!tile.includes("drawn by") && !tile.includes("10 units") && tile.includes("<path d="), "a compact tile has walls and no furniture");
 });

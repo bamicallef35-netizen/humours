@@ -35,7 +35,9 @@ function labelCell(plan, id, c) {
 
 export function planSheet(state, opts = {}) {
   const { plan, p, people, sympathy, spineY } = state;
-  const cell = opts.cell || 14, pad = 48, withBlock = opts.block !== false, n = people.length;
+  // compact: a tile for a contact sheet — no header, scale bar or block
+  const compact = opts.compact === true, withBlock = !compact && opts.block !== false;
+  const cell = opts.cell || 14, pad = compact ? 10 : 48, n = people.length;
   const gw = plan.w * cell, gh = plan.h * cell;
   const X = (x) => pad + x * cell, Y = (y) => pad + y * cell;
   const ds = doors(state), cs = centroids(state);
@@ -52,11 +54,13 @@ export function planSheet(state, opts = {}) {
   ].map(([k, v]) => [k, wrap(v, maxChars)]);
   const textH = rows.reduce((h, [, lines]) => h + lines.length * 13 + 5, 0), rightH = 14 + Math.max(n * sq, n * 11) + 6;
   const blockH = withBlock ? 40 + Math.max(textH, rightH) : 0;
-  const W = gw + pad * 2, H = gh + pad * 2 + 30 + blockH;
+  const W = gw + pad * 2, H = gh + pad * 2 + (compact ? 0 : 30) + blockH;
 
   let body = `<rect x="${pad + 0.5}" y="${pad + 0.5}" width="${gw}" height="${gh}" fill="none" stroke="${RULE}"/>`;
-  body += text(pad, pad - 14, `plan / seed ${p.seed} / step ${state.t}`, 10, INK2);
-  body += text(pad + gw, pad - 14, "benmicallef / humours / drawn by the model", 10, INK2, "end");
+  if (!compact) {
+    body += text(pad, pad - 14, `plan / seed ${p.seed} / step ${state.t}`, 10, INK2);
+    body += text(pad + gw, pad - 14, "benmicallef / humours / drawn by the model", 10, INK2, "end");
+  }
   // the corridor, and the structural depth either side of it
   body += `<rect x="${X(0)}" y="${Y(spineY)}" width="${gw}" height="${cell}" fill="${PAPER2}"/>`;
   for (const yy of [spineY - p.depth, spineY + p.depth + 1]) {
@@ -73,36 +77,38 @@ export function planSheet(state, opts = {}) {
       if (u === EMPTY || u < SPINE) thick += seg; else thin += seg;   // outside wall / partition
     }
   }
-  body += `<path d="${thick}" stroke="${INK}" stroke-width="2.2" fill="none" stroke-linecap="square"/>`;
-  body += `<path d="${thin}" stroke="${INK}" stroke-width="1" fill="none"/>`;
+  body += `<path d="${thick}" stroke="${INK}" stroke-width="${compact ? 1.4 : 2.2}" fill="none" stroke-linecap="square"/>`;
+  body += `<path d="${thin}" stroke="${INK}" stroke-width="${compact ? 0.6 : 1}" fill="none"/>`;
   // doors: a gap in the wall, and the leaf's swing into the room
   for (const d of ds) {
     const hx = d.dx === 1 ? X(d.x + 1) : X(d.x), hy = d.dy === 1 ? Y(d.y + 1) : Y(d.y);
-    const col = d.kind === "between" ? ACCENT : INK2, r = cell - 1.5;
+    const col = d.kind === "between" ? ACCENT : INK2, r = cell - 1.5, lw = compact ? 0.5 : 0.8;
     if (d.dx !== 0) {
       body += `<line x1="${hx}" y1="${hy + 1.5}" x2="${hx}" y2="${hy + cell - 1.5}" stroke="${PAPER}" stroke-width="3.5"/>`;
       const sx = hx, sy = hy + 1.5, ex = sx - d.dx * r, ey = sy + r, sweep = d.dx === 1 ? 1 : 0;
-      body += `<path d="M${sx} ${sy}A${r} ${r} 0 0 ${sweep} ${ex} ${ey}" stroke="${col}" fill="none" stroke-width="0.8"/><line x1="${sx}" y1="${sy}" x2="${ex}" y2="${sy}" stroke="${col}" stroke-width="0.8"/>`;
+      body += `<path d="M${sx} ${sy}A${r} ${r} 0 0 ${sweep} ${ex} ${ey}" stroke="${col}" fill="none" stroke-width="${lw}"/><line x1="${sx}" y1="${sy}" x2="${ex}" y2="${sy}" stroke="${col}" stroke-width="${lw}"/>`;
     } else {
       body += `<line x1="${hx + 1.5}" y1="${hy}" x2="${hx + cell - 1.5}" y2="${hy}" stroke="${PAPER}" stroke-width="3.5"/>`;
       const sx = hx + 1.5, sy = hy, ex = sx + r, ey = sy - d.dy * r, sweep = d.dy === -1 ? 1 : 0;
-      body += `<path d="M${sx} ${sy}A${r} ${r} 0 0 ${sweep} ${ex} ${ey}" stroke="${col}" fill="none" stroke-width="0.8"/><line x1="${sx}" y1="${sy}" x2="${sx}" y2="${ey}" stroke="${col}" stroke-width="0.8"/>`;
+      body += `<path d="M${sx} ${sy}A${r} ${r} 0 0 ${sweep} ${ex} ${ey}" stroke="${col}" fill="none" stroke-width="${lw}"/><line x1="${sx}" y1="${sy}" x2="${sx}" y2="${ey}" stroke="${col}" stroke-width="${lw}"/>`;
     }
   }
   // the entrance, from the left
-  const ey0 = Y(spineY) + cell / 2;
-  body += `<path d="M${X(0) - 22} ${ey0}H${X(0) - 4}M${X(0) - 10} ${ey0 - 4}L${X(0) - 4} ${ey0}L${X(0) - 10} ${ey0 + 4}" stroke="${INK}" fill="none"/>`;
-  body += text(X(0) - 26, ey0 + 3, "in", 9, INK2, "end");
+  const ey0 = Y(spineY) + cell / 2, al = compact ? 8 : 22;
+  body += `<path d="M${X(0) - al} ${ey0}H${X(0) - 2}M${X(0) - 6} ${ey0 - 3}L${X(0) - 2} ${ey0}L${X(0) - 6} ${ey0 + 3}" stroke="${INK}" fill="none"/>`;
+  if (!compact) body += text(X(0) - 26, ey0 + 3, "in", 9, INK2, "end");
   // room numbers, on the cell nearest each room's centre
   for (const person of people) {
     const c = cs[person.id]; if (!c.n) continue;
     const [lx, ly] = labelCell(plan, person.id, c);
-    body += text(X(lx + 0.5), Y(ly + 0.5) + 3.5, String(person.id), 9, INK, "middle");
+    body += text(X(lx + 0.5), Y(ly + 0.5) + (compact ? 2.2 : 3.5), String(person.id), compact ? 6 : 9, INK, "middle");
   }
   // scale bar: ten cells
-  const sbY = pad + gh + 22;
-  body += `<line x1="${pad}" y1="${sbY}" x2="${pad + 10 * cell}" y2="${sbY}" stroke="${INK}" stroke-width="2"/>`;
-  body += text(pad + 10 * cell + 8, sbY + 4, "10 units", 10, INK2);
+  if (!compact) {
+    const sbY = pad + gh + 22;
+    body += `<line x1="${pad}" y1="${sbY}" x2="${pad + 10 * cell}" y2="${sbY}" stroke="${INK}" stroke-width="2"/>`;
+    body += text(pad + 10 * cell + 8, sbY + 4, "10 units", 10, INK2);
+  }
   if (withBlock) {
     const ty = pad + gh + 54;
     body += `<line x1="${pad}" y1="${ty - 14}" x2="${pad + gw}" y2="${ty - 14}" stroke="${RULE}"/>`;
