@@ -1,7 +1,7 @@
 // A contact sheet of plans from many interviews:  node tools/multitude.js [count] [firstSeed]
 // Twelve inhabitants' groups, twelve plans: the same rules, different humours.
 import { writeFileSync, mkdirSync } from "node:fs";
-import { run, roomArea } from "../docs/humours.js";
+import { run } from "../docs/humours.js";
 import { planSheet } from "../docs/sheet.js";
 const count = Number(process.argv[2] || 12), first = Number(process.argv[3] || 1);
 const cols = 3, cell = 5, pad = 48;
@@ -11,7 +11,7 @@ for (let i = 0; i < count; i++) {
   const inner = planSheet(state, { compact: true, cell });
   const m = inner.match(/viewBox="0 0 (\d+) (\d+)"/), w = Number(m[1]), h = Number(m[2]);
   const mean = (k) => state.people.reduce((s, q) => s + q[k], 0) / state.people.length;
-  tiles.push({ seed, w, h, svg: inner.replace(/^<svg [^>]*>/, "").replace(/<\/svg>\s*$/, "").replace(/<rect width="\d+" height="\d+" fill="#ffffff"\/>\n<rect x="0.5" y="0.5"[^>]*\/>/, ""), caption: `seed ${seed} / mean stress ${mean("stress").toFixed(2)} / mean empathy ${mean("empathy").toFixed(2)} / ${roomArea(state)} units` });
+  tiles.push({ seed, w, h, svg: inner.replace(/^<svg [^>]*>/, "").replace(/<\/svg>\s*$/, "").replace(/<rect width="\d+" height="\d+" fill="#ffffff"\/>\n<rect x="0.5" y="0.5"[^>]*\/>/, ""), caption: `seed ${seed} / stress ${mean("stress").toFixed(2)} / empathy ${mean("empathy").toFixed(2)}` });
 }
 const tw = tiles[0].w + 16, th = tiles[0].h + 26, rows = Math.ceil(count / cols);
 const W = pad * 2 + cols * tw, H = pad * 2 + rows * th + 40;
