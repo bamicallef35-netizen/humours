@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>humours / Benjamin Micallef</title>
+<meta name="description" content="A dwelling plan grown from its inhabitants' humours: stress encloses, calm exposes, sympathy attracts, antipathy repels; every room keeps a door to the corridor. An homage to R&Sie(n)'s Une architecture des humeurs (2010).">
+<link rel="stylesheet" href="./style.css">
+<style>figure.demo .stage { max-height: none; } figure.demo .stage svg { display: block; width: 100%; height: auto; }</style>
+</head>
+<body>
+<main>
+  <header class="site">
+    <h1>humours</h1>
+    <p class="meta">a plan grown from its inhabitants' humours / premise after R&amp;Sie(n), <em>Une architecture des humeurs</em>, Le Laboratoire, Paris, 2010 / an homage in software, not a reconstruction / <a href="https://github.com/benmicallef/humours">source</a> / <a href="https://benmicallef.github.io/">benmicallef</a></p>
+  </header>
+
+  <figure class="demo">
+    <div class="stage" id="stage" aria-label="a plan of rooms growing either side of a corridor"></div>
+    <div class="controls">
+      <div class="group">
+        <button id="playPause" aria-pressed="true">growing</button>
+        <button id="reset" aria-pressed="false">reset</button>
+      </div>
+      <div class="group">
+        <span class="lbl">interview</span>
+        <input type="number" id="seed" value="1" min="1" step="1">
+        <button id="newseed" aria-pressed="false">new interview</button>
+      </div>
+      <div class="group">
+        <span class="lbl">speed</span>
+        <input type="range" id="speed" min="1" max="8" step="1" value="1">
+      </div>
+      <div class="group" id="humours">
+        <span class="lbl">humours</span>
+        <button data-h="auto" aria-pressed="true">as interviewed</button>
+        <button data-h="stress" aria-pressed="false">all stressed</button>
+        <button data-h="calm" aria-pressed="false">all calm</button>
+      </div>
+      <div class="group">
+        <button id="sheet" aria-pressed="false">export sheet</button>
+      </div>
+    </div>
+    <div class="readout" id="readout">
+      <span class="k">room</span> <span id="area">0</span> <span class="k">of</span> <span id="budget">0</span> <span class="k">units</span>
+      &nbsp; <span class="k">step</span> <span id="step">0</span>
+      &nbsp; <span class="k">doors</span> <span id="doors">0</span>
+      &nbsp; <span class="k">access</span> <span id="access">held</span>
+      <br>
+      <span id="people"></span>
+    </div>
+    <figcaption>a plan. the grey band is the corridor, entered from the left; each numbered room belongs to one inhabitant, whose stress (s) and empathy (e) are printed in it. rooms grow one cell at a time by rules their humours bias, until the area runs out. a door to the corridor is kept for every room; a blue door opens between two rooms whose sympathy is high enough. dashed lines mark the structural depth. export sheet downloads the drawing with its title block and the interview.</figcaption>
+  </figure>
+
+  <section class="text">
+    <p>Six inhabitants are interviewed, as numbers: a stress, an empathy, and a sympathy for each of the others. Each inhabitant then claims a room, one cell at a time, from a seed on the corridor's flank. Every candidate cell is scored under that inhabitant's humours and one is drawn by softmax. Stress scores enclosure and distance from the corridor; calm scores exposure and the corridor's edge; sympathy pulls growth toward the rooms it likes and antipathy pushes it from the rooms it does not; empathy raises the appetite for any contact at all. The plan finishes when the area is spent.</p>
+    <p>A stand-in for structure: no room cell may lie further than a fixed depth from the corridor, every room stays 4-connected by construction, and every room keeps at least one cell on the corridor, so access holds after every step. Doors are read off the finished plan — one per room to the corridor, one between any two touching rooms whose sympathy is above the openness threshold — and are drawn on the sheet, which is the output.</p>
+    <h2>what R&amp;Sie(n) did, and what this is not</h2>
+    <p><em>Une architecture des humeurs</em> (Le Laboratoire, Paris, from 22 January 2010) read visitors' body chemistry and interpreted it as humours; the readings set deliberately uncertain protocols for a collective residential structure; François Jouve's recursive structural optimisation generated the morphologies; a secretion machine, Viab02, was to extrude the components in bio-cement. None of that is reproduced here. The optimisation, the chemistry and the machine are absent; the humours are seeded numbers and read no one; the structural rule is a depth limit on a grid. What is kept is the premise, that a plan can be the consequence of its inhabitants' moods run through a procedure, and the scenario format of the drawing.</p>
+    <p class="meta">9 deterministic tests / zero dependencies / MIT / <a href="https://github.com/benmicallef/humours">README and sources</a></p>
+  </section>
+</main>
+
+<script type="module">
+import { createState, step, roomArea, doors, accessHolds } from "./humours.js";
+import { planSheet } from "./sheet.js";
+
+const stage = document.getElementById("stage");
+const ui = { area: document.getElementById("area"), budget: document.getElementById("budget"), step: document.getElementById("step"),
+  doors: document.getElementById("doors"), access: document.getElementById("access"), people: document.getElementById("people") };
+let state = null, running = true, speed = 1, seed = 1, drawnAt = -1, override = null, lastDraw = 0;
+
+function build() {
+  state = createState({ seed }); state.override = override; drawnAt = -1;
+  ui.budget.textContent = state.p.area;
+  ui.people.innerHTML = state.people.map((q) =>
+    `<span class="k">${q.id}</span> <span class="k">stress</span><span class="bar"><i style="width:${(q.stress * 100).toFixed(0)}%"></i></span><span class="k">empathy</span><span class="bar"><i style="width:${(q.empathy * 100).toFixed(0)}%"></i></span>&nbsp;&nbsp;`).join("");
+}
+function draw() {
+  stage.innerHTML = planSheet(state, { block: false });
+  ui.area.textContent = roomArea(state); ui.step.textContent = state.t;
+  ui.doors.textContent = doors(state).length; ui.access.textContent = accessHolds(state) ? "held" : "BROKEN";
+  drawnAt = state.t;
+}
+function frame(now) {
+  if (running && !state.finished && now - lastDraw > 90) { for (let i = 0; i < speed; i++) step(state); lastDraw = now; }
+  if (state.t !== drawnAt) draw();
+  requestAnimationFrame(frame);
+}
+const playPause = document.getElementById("playPause");
+playPause.addEventListener("click", () => { running = !running; playPause.setAttribute("aria-pressed", String(running)); playPause.textContent = running ? "growing" : "paused"; });
+document.getElementById("reset").addEventListener("click", build);
+const seedInput = document.getElementById("seed");
+seedInput.addEventListener("change", () => { seed = Math.max(1, parseInt(seedInput.value) || 1); build(); });
+document.getElementById("newseed").addEventListener("click", () => { seed = (seed % 9999) + 1; seedInput.value = seed; build(); });
+document.getElementById("speed").addEventListener("input", (e) => { speed = parseInt(e.target.value); });
+document.getElementById("humours").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const mode = b.dataset.h;
+  override = mode === "stress" ? { stress: 1 } : mode === "calm" ? { stress: 0 } : null;
+  state.override = override; drawnAt = -1;
+  e.currentTarget.querySelectorAll("button").forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+});
+document.getElementById("sheet").addEventListener("click", () => {
+  const svg = planSheet(state);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  a.download = `humours-plan-seed${seed}-step${state.t}.svg`;
+  a.click(); URL.revokeObjectURL(a.href);
+});
+build(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "humours",
+  "version": "0.1.0",
+  "description": "A dwelling plan grown from its inhabitants' humours — an homage to R&Sie(n)'s Une architecture des humeurs (2010).",
+  "type": "module",
+  "license": "MIT",
+  "scripts": { "test": "node --test" },
+  "author": "Ben Micallef",
+  "repository": { "type": "git", "url": "https://github.com/benmicallef/humours" }
+}
